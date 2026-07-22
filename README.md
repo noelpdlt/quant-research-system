@@ -4,9 +4,6 @@ Summer 2026 project focused on building trading strategies and analyzing perform
 
 Experimented with a Pandas tutorial for Data Science in pandastutorial.ipynb. 
 
-Added functions get_data() to data.py and compute_returns() and moving_average() to features.py.
-Used these functions to graph the price and moving_average of 'AAPL' in financialdataset1.ipynb under 'Trial 1.'
+The first trading strategy used was a Momentum Strategy in momentumstrategy.ipynb. Our goal was to determine the best performing windows optimizing for the best Sharpe ratio. Repeating this experiment. Repeating this experiment for different tickers, we observe that this strategy mostly tends to have less cumulative returns than the market performance, this strategy shows less volatility, meaning that we are reducing risk with its trade-off being a smaller cumulative return.
 
-The first trading strategy used was a Momentum Strategy in momentumstrategy.ipynb, using the function momentum_strategy() we built in strategy.py. Here, we considered different windows for percentage change and compared the Sharpe ratio of both the Momentum strategy and the Market (Buy / Hold) performance. We also optimized the window value to find the window value within a range that yielded the highest Sharpe ratio value. Repeating this experiment for different tickers, we observe that this strategy mostly tends to have less cumulative returns than the market performance, this strategy shows less volatility, meaning that we are reducing risk with its trade-off being a smaller cumulative return.
-
- 
+The second trading strategy used was a Mean Reversion Strategy in meanreversionstr.ipynb. Here, we tested for the best window using a fixed threshold of 0.5, optimizing for Sharpe ratio, and then we tested for the best Sharpe ratio across all our possible windows and thresholds. For each iteration, we compared the strategy to a Momentum Strategy, whether for the same fixed window or for the best performing Momentum window. We observe that this strategy outperforms a Momentum Strategy whenever we need to control for volatility and when the stock is often perceiving losts in its market value. 
