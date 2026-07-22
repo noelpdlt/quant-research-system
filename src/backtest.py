@@ -1,14 +1,30 @@
 import numpy as np
 
-def backtest_mom(df):
-    df["strategy_returns_mom"] = df["returns"] * df["signal_mom"].shift(1)
-    df["cumulative_returns_mom"] = (1 + df["strategy_returns_mom"]).cumprod()
+def backtest(df):
+    df["market_cumulative"] = (1 + df["returns"]).cumprod()
+
+    if "signal_mom" in df.columns:
+        df["strategy_returns_mom"] = df["returns"] * df["signal_mom"].shift(1)
+        df["cumulative_returns_mom"] = (1 + df["strategy_returns_mom"]).cumprod()
+    
+    if "signal_mr" in df.columns:
+        df["strategy_returns_mr"] = df["returns"] * df["signal_mr"].shift(1)
+        df["cumulative_returns_mr"] = (1 + df["strategy_returns_mr"]).cumprod()
+
+    if "signal_mo_tr" in df.columns:
+        df["strategy_returns_mo_tr"] = df["returns"] * df["signal_mo_tr"].shift(1)
+        df["cumulative_returns_mo_tr"] = (1 + df["strategy_returns_mo_tr"]).cumprod()
+
+    if "signal_mo_vo" in df.columns:
+        df["strategy_returns_mo_vo"] = df["returns"] * df["signal_mo_vo"].shift(1)
+        df["cumulative_returns_mo_vo"] = (1 + df["strategy_returns_mo_vo"]).cumprod()
+    
+    if "signal_mo_vr" in df.columns:
+        df["strategy_returns_mo_vr"] = df["returns"] * df["signal_mo_vr"].shift(1)
+        df["cumulative_returns_mo_vr"] = (1 + df["strategy_returns_mo_vr"]).cumprod()
+
     return df
 
-def backtest_mr(df):
-    df["strategy_returns_mr"] = df["returns"] * df["signal_mr"].shift(1)
-    df["cumulative_returns_mr"] = (1 + df["strategy_returns_mr"]).cumprod()
-    return df
 
 def sharpe_ratio(returns):
     return np.mean(returns) / np.std(returns) * np.sqrt(252)
