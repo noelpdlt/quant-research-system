@@ -1,48 +1,36 @@
 import matplotlib.pyplot as plt
 
+strategies = [
+        ('Momentum Strategy', 'mom'),
+        ('Mean Reversion Strategy', 'mr'),
+        ('Momentum + Trend Filter Strategy', 'mo_tr'),
+        ('Momentum + Low Volatility Filter Strategy', 'mo_vo'),
+        ('Momentum + Volume Ratio Filter Strategy', 'mo_vr')
+    ]
+
+features = [
+    ('Volatility', 'volatility'),
+    ('Volume Ratio', 'volume_ratio'),
+    ('Trend Strength', 'trend_strength')
+]
+
 def plot_performance(df):
     plt.figure(figsize=(10, 6))
-
+    
     plt.plot(
         df.index,
         df["market_cumulative"],
         label="Market"
     )
 
-    if "cumulative_returns_mom" in df.columns:
-        plt.plot(
-            df.index,
-            df["cumulative_returns_mom"],
-            label="Momentum Strategy"
-        )
-    
-    if "cumulative_returns_mr" in df.columns:
-        plt.plot(
-            df.index,
-            df["cumulative_returns_mr"],
-            label="Mean Reversion Strategy"
-        )
-    
-    if "cumulative_returns_mo_tr" in df.columns:
-        plt.plot(
-            df.index,
-            df["cumulative_returns_mo_tr"],
-            label="Momentum + Trend Filter Strategy"
-        )
-
-    if "cumulative_returns_mo_vo" in df.columns:
-        plt.plot(
-            df.index,
-            df["cumulative_returns_mo_vo"],
-            label="Momentum + Low Volatility Filter Strategy"
-        )
-
-    if "cumulative_returns_mo_vr" in df.columns:
-        plt.plot(
-            df.index,
-            df["cumulative_returns_mo_vr"],
-            label="Momentum + Volume Ratio Filter Strategy"
-        )
+    for name, ending in strategies:
+        cumulative_returns = 'cumulative_returns_' + ending
+        if  cumulative_returns in df.columns:
+            plt.plot(
+                df.index,
+                df[cumulative_returns],
+                label = name
+            )
 
     plt.title("Strategy vs Market Performance")
     plt.xlabel("Date")
@@ -50,3 +38,14 @@ def plot_performance(df):
     plt.legend()
 
     plt.show()
+
+def plot_features(df):
+    for name, feature in features:
+        plt.figure(figsize=(10,6))
+        plt.plot(df.index, df[feature])
+
+        plt.title(name)
+        plt.xlabel("Date")
+        plt.ylabel(name)
+        plt.legend()
+        plt.show()
