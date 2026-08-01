@@ -21,4 +21,10 @@ def generate_features(df, window = 20):
         df["ma20"] - df["ma50"]
     ) / df["ma50"]
 
+    df["momentum"] = df["Close"].pct_change(window)
+    
+    df["target"] = (
+        df["returns"].shift(-1) > 0
+    ).astype(int)
+
     return df

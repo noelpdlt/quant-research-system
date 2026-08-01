@@ -6,25 +6,30 @@ from src.visualization import plot_performance
 from src.data import get_data
 import os
 from pathlib import Path
+from sklearn.metrics import accuracy_score, precision_score, recall_score
+
 
 
 strategy_names = [
-        ('Momentum', 'mom'),
-        ('Mean Reversion', 'mr'),
-        ('Momentum + Trend Filter', 'mo_tr'),
-        ('Momentum + Low Volatility Filter', 'mo_vo'),
-        ('Momentum + Volume Ratio Filter', 'mo_vr')
+        ('Momentum', None, 'mom', None, None),
+        ('Mean Reversion', None, 'mr', None, None),
+        ("Momentum + Trend Strength", None, "mo_tr", None, None),
+        ("Momentum + Rolling Volatility", None, "mo_vo", None, None),
+        ("Momentum + Volume Ratio", None, "mo_vr", None, None),
+        ("Logistic Regression", None, "lr", None, None)
     ]
 
 def backtest(df):
     df["market_cumulative"] = (1 + df["returns"]).cumprod()
-    for _, ending in strategy_names:
-        signal = 'signal_' + ending
-        if signal in df.columns:
-            strategy_returns = 'strategy_returns_' + ending
-            cumulative_returns = 'cumulative_returns_' + ending
-            df[strategy_returns] = df["returns"] * df[signal].shift(1)
-            df[cumulative_returns] = (1 + df[strategy_returns]).cumprod()
+    for _, _, ending, _, _  in strategy_names:
+        signal = f"signal_{ending}"
+        if signal not in df.columns:
+            continue
+        returns = f"strategy_returns_{ending}"
+        cumulative = f"cumulative_returns_{ending}"
+        df[returns] = df["returns"] * df[signal].shift(1)
+        df[cumulative] = (1 + df[returns]).cumprod()
+
     return df
 
 
@@ -54,265 +59,203 @@ def max_drawdown(cumulative_returns):
     return drawdown.min()
 
 
-def results_table(df):
-    table = pd.DataFrame(columns=['Strategy', 'Sharpe', 'Volatility', 'Max DD'])
-    
-    table.loc[len(table)] = ['Market', sharpe_ratio(df['returns']), 
-                             volatility(df['returns']), max_drawdown(df["market_cumulative"])]
-    for name, ending in strategy_names:
-        returns , cumulative = "strategy_returns_" + ending, "cumulative_returns_" + ending
-        if returns in df.columns:
-            strategy_sharpe = sharpe_ratio(df[returns])
-            strategy_vol = volatility(df[returns])
-            strategy_max_dd = max_drawdown(df[cumulative])
+def results_table(df, strategies = strategy_names):
+    table = pd.DataFrame(columns=[
+        'Strategy',
+        'Sharpe',
+        'Volatility',
+        'Max DD',
+        'Signal Accuracy',
+        'Signal Precision',
+        'Signal Recall'
+    ])
 
-            table.loc[len(table)] = [name, strategy_sharpe, strategy_vol, strategy_max_dd]
+    table.loc[len(table)] = [
+        "Market",
+        sharpe_ratio(df["returns"]),
+        volatility(df["returns"]),
+        max_drawdown(df["market_cumulative"]),
+        np.nan,
+        np.nan,
+        np.nan
+    ]
+
+    for name, _, ending, _, _ in strategies:
+
+        returns = f"strategy_returns_{ending}"
+        cumulative = f"cumulative_returns_{ending}"
+        signal = f"signal_{ending}"
+
+        if returns not in df.columns:
+            continue
+
+        signal_accuracy = np.nan
+        signal_precision = np.nan
+        signal_recall = np.nan
+
+        if signal in df.columns and "target" in df.columns:
+
+            valid = df[[signal, "target"]].dropna()
+
+            if len(valid) > 0:
+
+                signal_accuracy = accuracy_score(
+                    valid["target"],
+                    valid[signal]
+                )
+
+                signal_precision = precision_score(
+                    valid["target"],
+                    valid[signal],
+                    zero_division=0
+                )
+
+                signal_recall = recall_score(
+                    valid["target"],
+                    valid[signal],
+                    zero_division=0
+                )
+
+        table.loc[len(table)] = [
+            name,
+            sharpe_ratio(df[returns]),
+            volatility(df[returns]),
+            max_drawdown(df[cumulative]),
+            signal_accuracy,
+            signal_precision,
+            signal_recall
+        ]
 
     return table
 
-def csv_row(
-    asset,
-    strategy,
-    window,
-    threshold,
-    train_df,
-    test_df
-):
-    """
-    Create one CSV row containing both train and test performance.
-    """
+def apply_strategy(df, strategy, window=None, threshold=None, model=None):
 
-    name, _, ending, _ = strategy
+    _, strat_func, _, _, trainer = strategy
 
-    return {
-        "Asset": asset,
-        "Strategy": name,
-        "Window": window,
-        "Threshold": (
-            threshold * 100
-            if threshold is not None
-            else None
-        ),
+    df = df.copy()
 
-        "Train Sharpe": sharpe_ratio(
-            train_df[f"strategy_returns_{ending}"]
-        ),
-        "Train Volatility": volatility(
-            train_df[f"strategy_returns_{ending}"]
-        ),
-        "Train Max DD": max_drawdown(
-            train_df[f"cumulative_returns_{ending}"]
-        ),
+    if trainer is not None:
 
-        "Test Sharpe": sharpe_ratio(
-            test_df[f"strategy_returns_{ending}"]
-        ),
-        "Test Volatility": volatility(
-            test_df[f"strategy_returns_{ending}"]
-        ),
-        "Test Max DD": max_drawdown(
-            test_df[f"cumulative_returns_{ending}"]
+        df = strat_func(
+            df,
+            model
         )
-    }
 
-def window_table(df, strategies, windows = [5, 10, 20, 50]): 
-    results = pd.DataFrame(columns=['Strategy', 'Window', 'Sharpe', 'Volatility', 'Max DD']) 
-    for name, strategy, ending, _ in strategies: 
-        returns , cumulative = "strategy_returns_" + ending, "cumulative_returns_" + ending 
-        
-    for w in windows: 
-        df_copy = df.copy() 
-        df_copy = strategy(df_copy, window = w) 
-        df_copy = backtest(df_copy) 
-        strategy_sharpe = sharpe_ratio(df_copy[returns].dropna()) 
-        strategy_vol = volatility(df_copy[returns]) 
-        strategy_max_dd = max_drawdown(df_copy[cumulative]) 
-        results.loc[len(results)] = [name, w, strategy_sharpe, strategy_vol, strategy_max_dd] 
-        
+    elif threshold is None:
+
+        df = strat_func(
+            df,
+            window
+        )
+
+    else:
+
+        df = strat_func(
+            df,
+            window,
+            threshold
+        )
+
+    return backtest(df)
+
+
+def window_table(df, strategies, windows=[5, 10, 20, 50]):
+    results = pd.DataFrame(
+        columns=["Strategy","Window","Sharpe","Volatility","Max DD"]
+    )
+    for name, strategy, ending, thresholds, trainer in strategies:
+        for w in windows:
+            if thresholds is None:
+                df_copy = apply_strategy(df,(name, strategy, ending, thresholds, trainer),w)
+            else:
+                df_copy = apply_strategy(df, (name, strategy, ending, thresholds, trainer), w, thresholds[0] / 100)
     return results
 
-def find_best_window(df, strategy, windows):
 
-    _, strat_func, ending, _ = strategy
+def optimize_strategy(df, strategy, windows, windowplot=True):
 
-    best_sharpe = float("-inf")
-    best_window = None
+    name, strat_func, ending, thresholds, trainer = strategy
 
-    for window in windows:
+    # Machine learning strategies
+    if trainer is not None:
 
-        df_copy = df.copy()
+        model, metrics = trainer(df.copy())
 
-        df_copy = strat_func(df_copy, window)
-        df_copy = backtest(df_copy)
-
-        sharpe = sharpe_ratio(
-            df_copy[f"strategy_returns_{ending}"].dropna()
+        df = apply_strategy(
+            df,
+            strategy,
+            model=model
         )
 
-        if np.isnan(sharpe):
-            continue
+        return df, None, None, metrics
 
-        if sharpe > best_sharpe:
-            best_sharpe = sharpe
-            best_window = window
-
-    return best_window, best_sharpe
-
-def find_best_window_threshold(df, strategy, windows):
-
-    _, strat_func, ending, thresholds = strategy
 
     best_window = None
     best_threshold = None
     best_sharpe = float("-inf")
 
-    for window in windows:
+    params = []
+    sharpes = []
 
-        for threshold in thresholds:
 
-            threshold = threshold / 100
+    if thresholds is None:
+
+        for window in windows:
 
             df_copy = df.copy()
 
             df_copy = strat_func(
                 df_copy,
-                window,
-                threshold
+                window
             )
 
             df_copy = backtest(df_copy)
 
             sharpe = sharpe_ratio(
-                df_copy[f"strategy_returns_{ending}"].dropna()
+                df_copy[f"strategy_returns_{ending}"]
             )
 
             if np.isnan(sharpe):
                 continue
 
+            params.append(window)
+            sharpes.append(sharpe)
+
             if sharpe > best_sharpe:
 
                 best_sharpe = sharpe
                 best_window = window
-                best_threshold = threshold
 
-    return (
-        best_window,
-        best_threshold,
-        best_sharpe
-    )
+        print(f"Market Sharpe Ratio: {sharpe_ratio(df['returns']):.4f}")
+        print(f"Best {name} Strategy window: {best_window}")
+        print(f"Best Sharpe ratio: {best_sharpe:.4f}")
+        print()
 
-def apply_strategy(df, strategy, window, threshold=None):
-    """
-    Apply a strategy with fixed parameters and run the backtest.
-    """
+        if windowplot:
 
-    _, strat_func, _, thresholds = strategy
+            plt.figure(figsize=(10,5))
 
-    df = df.copy()
+            plt.plot(
+                params,
+                sharpes,
+                marker="o"
+            )
 
-    if thresholds is None:
-        df = strat_func(df, window)
+            plt.axvline(
+                best_window,
+                color="red",
+                linestyle="--",
+                label=f"Best = {best_window}"
+            )
+
+            plt.xlabel(f"{name} Window")
+            plt.ylabel("Sharpe Ratio")
+            plt.title(f"{name} Window Optimization")
+            plt.grid(alpha=0.3)
+            plt.legend()
+            plt.show()
+
     else:
-        df = strat_func(df, window, threshold)
-
-    df = backtest(df)
-
-    return df
-
-
-def optimize_w(df, strategy, windows, windowplot):
-
-    name, _, ending, _ = strategy
-
-    best_window, best_sharpe = find_best_window(
-        df,
-        strategy,
-        windows
-    )
-
-    print(f"Market Sharpe Ratio: {sharpe_ratio(df['returns']):.4f}")
-    print(f"Best {name} Strategy window: {best_window}")
-    print(f"Best Sharpe ratio: {best_sharpe:.4f}")
-
-    if windowplot:
-
-        params = []
-        sharpes = []
-
-        for window in windows:
-
-            df_copy = apply_strategy(
-                df,
-                strategy,
-                window
-            )
-
-            sharpe = sharpe_ratio(
-                df_copy[f"strategy_returns_{ending}"].dropna()
-            )
-
-            params.append(window)
-            sharpes.append(sharpe)
-
-        plt.figure(figsize=(10,5))
-
-        plt.plot(
-            params,
-            sharpes,
-            marker="o"
-        )
-
-        plt.axvline(
-            best_window,
-            color="red",
-            linestyle="--",
-            label=f"Best = {best_window}"
-        )
-
-        plt.xlabel(f"{name} Window")
-        plt.ylabel("Sharpe Ratio")
-        plt.title(f"{name} Window Optimization")
-        plt.grid(alpha=0.3)
-        plt.legend()
-        plt.show()
-
-    df = apply_strategy(
-        df,
-        strategy,
-        best_window
-    )
-
-    return df, best_window, None
-
-def optimize_w_th(df, strategy, windows, windowplot):
-
-    name, _, ending, thresholds = strategy
-
-    (
-        best_window,
-        best_threshold,
-        best_sharpe
-    ) = find_best_window_threshold(
-        df,
-        strategy,
-        windows
-    )
-
-    print(f"Market Sharpe Ratio: {sharpe_ratio(df['returns']):.4f}")
-
-    if best_window is None:
-
-        print("No valid parameter combination found.")
-        return df, None, None
-
-    print(f"Best window: {best_window}")
-    print(f"Best threshold: {best_threshold * 100:.0f}%")
-    print(f"Best Sharpe: {best_sharpe:.4f}")
-
-    if windowplot:
-
-        window_params = []
-        sharpes = []
 
         for window in windows:
 
@@ -322,15 +265,16 @@ def optimize_w_th(df, strategy, windows, windowplot):
 
                 threshold = threshold / 100
 
-                df_copy = apply_strategy(
-                    df,
-                    strategy,
+                df_copy = strat_func(
+                    df.copy(),
                     window,
                     threshold
                 )
 
+                df_copy = backtest(df_copy)
+
                 sharpe = sharpe_ratio(
-                    df_copy[f"strategy_returns_{ending}"].dropna()
+                    df_copy[f"strategy_returns_{ending}"]
                 )
 
                 if np.isnan(sharpe):
@@ -339,84 +283,124 @@ def optimize_w_th(df, strategy, windows, windowplot):
                 if sharpe > best_for_window:
                     best_for_window = sharpe
 
+                if sharpe > best_sharpe:
+
+                    best_sharpe = sharpe
+                    best_window = window
+                    best_threshold = threshold
+
+
             if best_for_window != float("-inf"):
 
-                window_params.append(window)
+                params.append(window)
                 sharpes.append(best_for_window)
 
-        plt.figure(figsize=(10,5))
+        if windowplot:
 
-        plt.plot(
-            window_params,
-            sharpes,
-            marker="o"
-        )
+            plt.figure(figsize=(10,5))
 
-        plt.scatter(
-            best_window,
-            best_sharpe,
-            color="red",
-            s=100,
-            label=f"Best = ({best_window}, {best_threshold:.2f})"
-        )
+            plt.plot(
+                params,
+                sharpes,
+                marker="o"
+                )
 
-        plt.xlabel("Window")
-        plt.ylabel("Sharpe")
-        plt.title(f"{name} Optimization")
-        plt.grid(alpha=0.3)
-        plt.legend()
-        plt.show()
+            plt.scatter(
+                best_window,
+                best_sharpe,
+                color="red",
+                s=100,
+                label=f"Best = ({best_window}, {best_threshold:.2f})"
+            )
 
-    df = apply_strategy(
-        df,
-        strategy,
-        best_window,
-        best_threshold
-    )
+            plt.xlabel("Window")
+            plt.ylabel("Sharpe Ratio")
+            plt.title(f"{name} Window Optimization")
+            plt.grid(alpha=0.3)
+            plt.legend()
+            plt.show()
+        
+        print(f"Market Sharpe Ratio: {sharpe_ratio(df['returns']):.4f}")
+        print(f"Best {name} Strategy window: {best_window}")
+        print(f"Best threshold: {best_threshold*100:.0f}%")
+        print(f"Best Sharpe ratio: {best_sharpe:.4f}")
+        print()
 
-    return df, best_window, best_threshold
+    if best_threshold is None:
 
-def optimize_strategy(df, strategy, windows, windowplot=True):
-    """
-    Optimize a single strategy and return the optimized dataframe
-    together with the best parameters.
-    """
-
-    if strategy[3] is not None:
-        return optimize_w_th(
+        df = apply_strategy(
             df,
             strategy,
-            windows,
-            windowplot
+            best_window
         )
 
-    return optimize_w(
-        df,
+    else:
+
+        df = apply_strategy(
+            df,
+            strategy,
+            best_window,
+            best_threshold
+        )
+
+
+    return df, best_window, best_threshold, None
+
+def fit_strategy(
+    train,
+    test,
+    strategy,
+    windows,
+    windowplot=True
+):
+
+    name, strat_func, ending, thresholds, trainer = strategy
+
+
+    if trainer is not None:
+
+        print("Training ML model...")
+
+        model, metrics = trainer(train.copy())
+
+        train = strat_func(train.copy(), model)
+        test = strat_func(test.copy(), model)
+
+        train = backtest(train)
+        test = backtest(test)
+
+        print("Logistic Regression model trained and tested.")
+        print()
+
+        return train, test, None, None, metrics
+
+
+    train, best_window, best_threshold, metrics = optimize_strategy(
+        train.copy(),
         strategy,
         windows,
         windowplot
     )
 
-def copy_strategy_columns(source, destination, ending):
 
-    strategy_returns = f"strategy_returns_{ending}"
-    cumulative_returns = f"cumulative_returns_{ending}"
+    test = apply_strategy(
+        test,
+        strategy,
+        best_window,
+        best_threshold
+    )
 
-    for col in [strategy_returns, cumulative_returns]:
 
-        if col in source.columns:
-            destination[col] = source[col]
-    
+    return train, test, best_window, best_threshold, metrics
 
 def optimize(df, strategies, windows, windowplot=True, performanceplot=True):
     df = backtest(df)
     base = df.copy()
-
     for strategy in strategies:
 
         print(strategy[0])
 
-        temp, best_window, best_threshold = optimize_strategy(
+        temp, best_window, best_threshold, metrics = optimize_strategy(
             base.copy(),
             strategy,
             windows,
@@ -424,17 +408,17 @@ def optimize(df, strategies, windows, windowplot=True, performanceplot=True):
         )
 
         ending = strategy[2]
-
-        copy_strategy_columns(
-            temp,
-            df,
-            ending
-        )
-
+        for col in (
+            f"signal_{ending}",
+            f"strategy_returns_{ending}",
+            f"cumulative_returns_{ending}"
+        ):
+            if col in temp.columns:
+                df[col] = temp[col]
     if performanceplot:
         plot_performance(df)
 
-    return results_table(df)
+    return results_table(df, strategies)
 
 def optimize_tt(
     train,
@@ -453,62 +437,46 @@ def optimize_tt(
 
     train_base = train.copy()
     test_base = test.copy()
-    csv_rows = []
+
+    best_parameters = []
 
     for strategy in strategies:
 
         print(strategy[0])
 
-        train_temp, best_window, best_threshold = optimize_strategy(
-            train_base.copy(),
+        train_temp, test_temp, best_window, best_threshold, metrics = fit_strategy(
+            train_base,
+            test_base,
             strategy,
             windows,
             windowplot
         )
 
-        if best_threshold is None:
-
-            test_temp = apply_strategy(
-                test_base.copy(),
-                strategy,
-                best_window
-            )
-
-        else:
-
-            test_temp = apply_strategy(
-                test_base.copy(),
-                strategy,
-                best_window,
-                best_threshold
-            )
-
         ending = strategy[2]
 
-        copy_strategy_columns(
-            train_temp,
-            train,
-            ending
-        )
+        for col in (
+            f"strategy_returns_{ending}",
+            f"cumulative_returns_{ending}",
+            f"signal_{ending}"
+        ):
 
-        copy_strategy_columns(
-            test_temp,
-            test,
-            ending
-        )
+            if col in train_temp.columns:
+                train[col] = train_temp[col]
 
-        if save_csv:
+            if col in test_temp.columns:
+                test[col] = test_temp[col]
 
-            csv_rows.append(
-                csv_row(
-                    asset,
-                    strategy,
-                    best_window,
-                    best_threshold,
-                    train_temp,
-                    test_temp
-                )
+        best_parameters.append({
+
+            "Strategy": strategy[0],
+            "Window": best_window,
+            "Threshold": (
+                best_threshold * 100
+                if best_threshold is not None
+                else None
             )
+
+        })
 
     if performanceplot:
 
@@ -518,16 +486,49 @@ def optimize_tt(
         print("Testing Performance")
         plot_performance(test)
 
-
-    train_results = results_table(train)
-
-    test_results = results_table(test)
+    train_results = results_table(train, strategies)
+    test_results = results_table(test, strategies)
 
     if save_csv:
 
-        csv_df = pd.DataFrame(csv_rows)
+        csv_rows = []
 
-        csv_df.to_csv(
+        for params in best_parameters:
+
+            strategy = params["Strategy"]
+
+            train_row = train_results.loc[
+                train_results["Strategy"] == strategy
+            ].iloc[0]
+
+            test_row = test_results.loc[
+                test_results["Strategy"] == strategy
+            ].iloc[0]
+
+            csv_rows.append({
+
+                "Asset": asset,
+                "Strategy": strategy,
+                "Window": params["Window"],
+                "Threshold": params["Threshold"],
+
+                "Train Sharpe": train_row["Sharpe"],
+                "Train Volatility": train_row["Volatility"],
+                "Train Max DD": train_row["Max DD"],
+                "Train Signal Accuracy": train_row["Signal Accuracy"],
+                "Train Signal Precision": train_row["Signal Precision"],
+                "Train Signal Recall": train_row["Signal Recall"],
+
+                "Test Sharpe": test_row["Sharpe"],
+                "Test Volatility": test_row["Volatility"],
+                "Test Max DD": test_row["Max DD"],
+                "Test Signal Accuracy": test_row["Signal Accuracy"],
+                "Test Signal Precision": test_row["Signal Precision"],
+                "Test Signal Recall": test_row["Signal Recall"]
+
+            })
+
+        pd.DataFrame(csv_rows).to_csv(
             csv_path,
             mode="a",
             index=False,

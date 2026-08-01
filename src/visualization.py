@@ -5,7 +5,8 @@ strategies = [
         ('Mean Reversion Strategy', 'mr'),
         ('Momentum + Trend Filter Strategy', 'mo_tr'),
         ('Momentum + Low Volatility Filter Strategy', 'mo_vo'),
-        ('Momentum + Volume Ratio Filter Strategy', 'mo_vr')
+        ('Momentum + Volume Ratio Filter Strategy', 'mo_vr'),
+        ('Logistic Regression', 'lr')
     ]
 
 features = [

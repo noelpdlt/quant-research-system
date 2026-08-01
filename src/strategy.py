@@ -33,3 +33,29 @@ def momentum_voluratio_strategy(df, window=10):
     df["signal_mo_vr"] = ((df["momentum"] > 0) & 
                           (df["volume_ratio"] > 1)).astype(int)
     return df
+
+def logistic_strategy(df, model):
+
+    feature_columns = [
+        "momentum",
+        "volatility",
+        "trend_strength",
+        "volume_ratio"
+    ]
+
+    df = df.copy()
+
+    if "momentum" not in df.columns:
+        df["momentum"] = df["Close"].pct_change(20)
+
+    df["signal_lr"] = 0
+
+    valid_rows = df[feature_columns].dropna().index
+
+    df.loc[valid_rows, "signal_lr"] = (
+        model.predict(
+            df.loc[valid_rows, feature_columns]
+        )
+    )
+
+    return df
