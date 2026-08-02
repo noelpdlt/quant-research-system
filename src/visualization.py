@@ -6,7 +6,8 @@ strategies = [
         ('Momentum + Trend Filter Strategy', 'mo_tr'),
         ('Momentum + Low Volatility Filter Strategy', 'mo_vo'),
         ('Momentum + Volume Ratio Filter Strategy', 'mo_vr'),
-        ('Logistic Regression', 'lr')
+        ('Logistic Regression', 'lr'),
+        ('Random Forest', 'rf')
     ]
 
 features = [
@@ -15,7 +16,7 @@ features = [
     ('Trend Strength', 'trend_strength')
 ]
 
-def plot_performance(df):
+def plot_performance(df, logscale = False):
     plt.figure(figsize=(10, 6))
     
     plt.plot(
@@ -32,7 +33,8 @@ def plot_performance(df):
                 df[cumulative_returns],
                 label = name
             )
-
+    if logscale == True:
+        plt.yscale('log') 
     plt.title("Strategy vs Market Performance")
     plt.xlabel("Date")
     plt.ylabel("Growth of $1")

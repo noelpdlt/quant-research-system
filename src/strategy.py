@@ -59,3 +59,29 @@ def logistic_strategy(df, model):
     )
 
     return df
+
+def randforest_strategy(df, model):
+
+    feature_columns = [
+        "momentum",
+        "volatility",
+        "trend_strength",
+        "volume_ratio"
+    ]
+
+    df = df.copy()
+
+    if "momentum" not in df.columns:
+        df["momentum"] = df["Close"].pct_change(20)
+
+    df["signal_rf"] = 0
+
+    valid_rows = df[feature_columns].dropna().index
+
+    df.loc[valid_rows, "signal_rf"] = (
+        model.predict(
+            df.loc[valid_rows, feature_columns]
+        )
+    )
+
+    return df

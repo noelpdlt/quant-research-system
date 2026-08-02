@@ -1,4 +1,5 @@
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (accuracy_score, precision_score, recall_score)
 
 def build_ml_dataset(df):
@@ -30,6 +31,36 @@ def train_logistic(train_df):
     y = train_df["target"]
 
     model = LogisticRegression()
+
+    model.fit(X, y)
+
+    predictions = model.predict(X)
+
+    metrics = {
+        "Accuracy": accuracy_score(y, predictions),
+        "Precision": precision_score(y, predictions),
+        "Recall": recall_score(y, predictions)
+    }
+
+    return model, metrics
+
+def train_randforest(train_df):
+
+    feature_columns = [
+        "momentum",
+        "volatility",
+        "trend_strength",
+        "volume_ratio"
+    ]
+
+    train_df = train_df.dropna(
+        subset=feature_columns + ["target"]
+    )
+
+    X = train_df[feature_columns]
+    y = train_df["target"]
+
+    model = RandomForestClassifier()
 
     model.fit(X, y)
 

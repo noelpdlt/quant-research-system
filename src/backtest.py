@@ -16,7 +16,8 @@ strategy_names = [
         ("Momentum + Trend Strength", None, "mo_tr", None, None),
         ("Momentum + Rolling Volatility", None, "mo_vo", None, None),
         ("Momentum + Volume Ratio", None, "mo_vr", None, None),
-        ("Logistic Regression", None, "lr", None, None)
+        ("Logistic Regression", None, "lr", None, None),
+        ("Random Forest", None, "rf", None, None)
     ]
 
 def backtest(df):
@@ -369,7 +370,7 @@ def fit_strategy(
         train = backtest(train)
         test = backtest(test)
 
-        print("Logistic Regression model trained and tested.")
+        print(name + " model trained and tested.")
         print()
 
         return train, test, None, None, metrics
@@ -429,7 +430,8 @@ def optimize_tt(
     save_csv=False,
     csv_path=None,
     windowplot=True,
-    performanceplot=True
+    performanceplot=True,
+    logscale = False
 ):
 
     train = backtest(train)
@@ -481,10 +483,10 @@ def optimize_tt(
     if performanceplot:
 
         print("Training Performance")
-        plot_performance(train)
+        plot_performance(train, logscale=logscale)
 
         print("Testing Performance")
-        plot_performance(test)
+        plot_performance(test, logscale=logscale)
 
     train_results = results_table(train, strategies)
     test_results = results_table(test, strategies)
@@ -547,7 +549,8 @@ def optimize_assets(
     train_ratio = 0.7,
     save_csv=False,
     windowplot=False,
-    performanceplot=True
+    performanceplot=True,
+    logscale = False
 ):
 
     csv_path = None
@@ -588,7 +591,8 @@ def optimize_assets(
             save_csv=save_csv,
             csv_path=csv_path,
             windowplot=windowplot,
-            performanceplot=performanceplot
+            performanceplot=performanceplot,
+            logscale = logscale
         )
 
         print("\nTraining Results")
