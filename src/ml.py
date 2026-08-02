@@ -2,6 +2,13 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (accuracy_score, precision_score, recall_score)
 
+feature_columns = [
+        "momentum",
+        "volatility",
+        "trend_strength",
+        "volume_ratio"
+    ]
+
 def build_ml_dataset(df):
     columns = ["returns","momentum", "volatility", "trend_strength","volume_ratio","target"]
     return df[columns].dropna()
@@ -14,14 +21,7 @@ def train_test_split_ml(df, train_ratio=0.7):
 
     return train, test
 
-def train_logistic(train_df):
-
-    feature_columns = [
-        "momentum",
-        "volatility",
-        "trend_strength",
-        "volume_ratio"
-    ]
+def train_logistic(train_df, feature_columns = feature_columns, random_state=123):
 
     train_df = train_df.dropna(
         subset=feature_columns + ["target"]
@@ -30,7 +30,9 @@ def train_logistic(train_df):
     X = train_df[feature_columns]
     y = train_df["target"]
 
-    model = LogisticRegression()
+    model = LogisticRegression(
+        random_state=random_state
+    )
 
     model.fit(X, y)
 
@@ -44,14 +46,7 @@ def train_logistic(train_df):
 
     return model, metrics
 
-def train_randforest(train_df):
-
-    feature_columns = [
-        "momentum",
-        "volatility",
-        "trend_strength",
-        "volume_ratio"
-    ]
+def train_randforest(train_df, feature_columns = feature_columns):
 
     train_df = train_df.dropna(
         subset=feature_columns + ["target"]
@@ -73,8 +68,6 @@ def train_randforest(train_df):
     }
 
     return model, metrics
-
-
 
 def evaluate_model(model, test_df):
 
