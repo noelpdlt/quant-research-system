@@ -352,6 +352,7 @@ def fit_strategy(
     test,
     strategy,
     windows,
+    feature_set,
     windowplot=True
 ):
 
@@ -362,10 +363,10 @@ def fit_strategy(
 
         print("Training ML model...")
 
-        model, metrics = trainer(train.copy())
+        model, metrics = trainer(train.copy(), feature_set=feature_set)
 
-        train = strat_func(train.copy(), model)
-        test = strat_func(test.copy(), model)
+        train = strat_func(train.copy(), model, feature_set)
+        test = strat_func(test.copy(), model, feature_set)
 
         train = backtest(train)
         test = backtest(test)
@@ -426,6 +427,7 @@ def optimize_tt(
     test,
     strategies,
     windows,
+    feature_set,
     asset=None,
     save_csv=False,
     csv_path=None,
@@ -451,6 +453,7 @@ def optimize_tt(
             test_base,
             strategy,
             windows,
+            feature_set,
             windowplot
         )
 
@@ -476,7 +479,8 @@ def optimize_tt(
                 best_threshold * 100
                 if best_threshold is not None
                 else None
-            )
+            ),
+            "Is ML": strategy[4] is not None
 
         })
 
@@ -511,6 +515,7 @@ def optimize_tt(
 
                 "Asset": asset,
                 "Strategy": strategy,
+                "Feature Set": (feature_set if params["Is ML"] else None),
                 "Window": params["Window"],
                 "Threshold": params["Threshold"],
 
@@ -546,6 +551,7 @@ def optimize_assets(
     end_date,
     strategies,
     windows,
+    feature_set = 'v1',
     train_ratio = 0.7,
     save_csv=False,
     windowplot=False,
@@ -588,6 +594,7 @@ def optimize_assets(
             strategies=strategies,
             windows=windows,
             asset=asset,
+            feature_set=feature_set,
             save_csv=save_csv,
             csv_path=csv_path,
             windowplot=windowplot,

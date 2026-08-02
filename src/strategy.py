@@ -1,3 +1,6 @@
+from src.ml import feature_version
+
+
 def momentum_strategy(df, window=10):
     df["momentum"] = df["Close"].pct_change(window)
     df["signal_mom"] = (df["momentum"] > 0).astype(int)
@@ -34,15 +37,8 @@ def momentum_voluratio_strategy(df, window=10):
                           (df["volume_ratio"] > 1)).astype(int)
     return df
 
-def logistic_strategy(df, model):
-
-    feature_columns = [
-        "momentum",
-        "volatility",
-        "trend_strength",
-        "volume_ratio"
-    ]
-
+def logistic_strategy(df, model, feature_set):
+    feature_columns = feature_version(feature_set)
     df = df.copy()
 
     if "momentum" not in df.columns:
@@ -60,14 +56,8 @@ def logistic_strategy(df, model):
 
     return df
 
-def randforest_strategy(df, model):
-
-    feature_columns = [
-        "momentum",
-        "volatility",
-        "trend_strength",
-        "volume_ratio"
-    ]
+def randforest_strategy(df, model, feature_set):
+    feature_columns = feature_version(feature_set)
 
     df = df.copy()
 
