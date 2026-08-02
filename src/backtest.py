@@ -68,7 +68,8 @@ def results_table(df, strategies = strategy_names):
         'Max DD',
         'Signal Accuracy',
         'Signal Precision',
-        'Signal Recall'
+        'Signal Recall',
+        'Signal Active %'
     ])
 
     table.loc[len(table)] = [
@@ -76,6 +77,7 @@ def results_table(df, strategies = strategy_names):
         sharpe_ratio(df["returns"]),
         volatility(df["returns"]),
         max_drawdown(df["market_cumulative"]),
+        np.nan,
         np.nan,
         np.nan,
         np.nan
@@ -93,6 +95,7 @@ def results_table(df, strategies = strategy_names):
         signal_accuracy = np.nan
         signal_precision = np.nan
         signal_recall = np.nan
+        signal_active = np.nan
 
         if signal in df.columns and "target" in df.columns:
 
@@ -117,6 +120,8 @@ def results_table(df, strategies = strategy_names):
                     zero_division=0
                 )
 
+                signal_active = 100 * valid[signal].mean()
+
         table.loc[len(table)] = [
             name,
             sharpe_ratio(df[returns]),
@@ -124,7 +129,8 @@ def results_table(df, strategies = strategy_names):
             max_drawdown(df[cumulative]),
             signal_accuracy,
             signal_precision,
-            signal_recall
+            signal_recall,
+            signal_active
         ]
 
     return table
@@ -525,13 +531,15 @@ def optimize_tt(
                 "Train Signal Accuracy": train_row["Signal Accuracy"],
                 "Train Signal Precision": train_row["Signal Precision"],
                 "Train Signal Recall": train_row["Signal Recall"],
+                "Train Signal Active %": train_row["Signal Active %"],
 
                 "Test Sharpe": test_row["Sharpe"],
                 "Test Volatility": test_row["Volatility"],
                 "Test Max DD": test_row["Max DD"],
                 "Test Signal Accuracy": test_row["Signal Accuracy"],
                 "Test Signal Precision": test_row["Signal Precision"],
-                "Test Signal Recall": test_row["Signal Recall"]
+                "Test Signal Recall": test_row["Signal Recall"],
+                "Test Signal Active %": test_row["Signal Active %"]
 
             })
 
