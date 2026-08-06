@@ -380,7 +380,7 @@ def fit_strategy(
         print(name + " model trained and tested.")
         print()
 
-        return train, test, None, None, metrics
+        return train, test, None, None, metrics, model
 
 
     train, best_window, best_threshold, metrics = optimize_strategy(
@@ -399,7 +399,7 @@ def fit_strategy(
     )
 
 
-    return train, test, best_window, best_threshold, metrics
+    return train, test, best_window, best_threshold, metrics, None
 
 def optimize(df, strategies, windows, windowplot=True, performanceplot=True):
     df = backtest(df)
@@ -454,7 +454,7 @@ def optimize_tt(
 
         print(strategy[0])
 
-        train_temp, test_temp, best_window, best_threshold, metrics = fit_strategy(
+        train_temp, test_temp, best_window, best_threshold, metrics, _ = fit_strategy(
             train_base,
             test_base,
             strategy,
