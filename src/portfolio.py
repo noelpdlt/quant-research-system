@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+import matplotlib as plt
 from src.backtest import get_data, optimize_tt, results_table
 from src.features import generate_features
 from src.visualization import plot_performance
@@ -326,3 +328,51 @@ def optimize_portfolio(
         )
 
     return train_results, test_results
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+def efficient_frontier(returns_df, assets, num_portfolios=5000):
+    selected_returns = returns_df[assets]
+
+    annual_returns = selected_returns.mean() * 252
+    cov_matrix = selected_returns.cov() * 252
+
+    portfolio_returns = []
+    portfolio_risks = []
+
+    for _ in range(num_portfolios):
+
+        weights = np.random.random(len(assets))
+        weights /= weights.sum()
+
+        port_return = np.sum(weights * annual_returns)
+
+        port_risk = np.sqrt(
+            weights.T @ cov_matrix @ weights
+        )
+
+        portfolio_returns.append(port_return)
+        portfolio_risks.append(port_risk)
+
+    portfolio_returns = np.array(portfolio_returns)
+    portfolio_risks = np.array(portfolio_risks)
+
+    plt.figure(figsize=(10, 6))
+
+    plt.scatter(
+        portfolio_risks,
+        portfolio_returns,
+        alpha=0.4
+    )
+
+    plt.xlabel("Volatility")
+    plt.ylabel("Expected Return")
+    plt.title("Portfolio Simulation")
+    plt.grid(alpha=0.2)
+
+    plt.show()
+
+    return portfolio_returns, portfolio_risks
