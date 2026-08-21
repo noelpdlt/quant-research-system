@@ -90,10 +90,6 @@ def optimize_portfolio(
     train_asset_results = {}
     test_asset_results = {}
 
-    # =========================================================
-    # 1. RUN EACH ASSET THROUGH optimize_tt()
-    # =========================================================
-
     for asset, weight in weights.items():
 
         print("=" * 60)
@@ -127,13 +123,9 @@ def optimize_portfolio(
             logscale=logscale
         )
 
-        # Keep the actual modified DataFrames
         train_asset_results[asset] = train
         test_asset_results[asset] = test
 
-    # =========================================================
-    # 2. COMMON TRAIN / TEST INDICES
-    # =========================================================
 
     train_index = None
     test_index = None
@@ -157,13 +149,6 @@ def optimize_portfolio(
     train_portfolio = pd.DataFrame(index=train_index)
     test_portfolio = pd.DataFrame(index=test_index)
 
-    # =========================================================
-    # 3. MARKET PORTFOLIO
-    #
-    # Initial allocation = weights
-    # No rebalancing
-    # Weights drift naturally
-    # =========================================================
 
     train_market_values = pd.DataFrame(index=train_index)
     test_market_values = pd.DataFrame(index=test_index)
@@ -180,14 +165,11 @@ def optimize_portfolio(
             "returns"
         ].fillna(0)
 
-        # Training wealth
         train_market_values[asset] = (
             initial_weight *
             (1 + train_returns).cumprod()
         )
 
-        # IMPORTANT:
-        # Start test from the ENDING TRAINING VALUE
         ending_train_value = train_market_values[
             asset
         ].iloc[-1]
@@ -197,12 +179,10 @@ def optimize_portfolio(
             (1 + test_returns).cumprod()
         )
 
-    # Total portfolio wealth
     train_market_value = train_market_values.sum(axis=1)
 
     test_market_value = test_market_values.sum(axis=1)
 
-    # Daily portfolio returns
     train_portfolio["returns"] = (
         train_market_value.pct_change()
     ).fillna(0)
@@ -211,7 +191,6 @@ def optimize_portfolio(
         test_market_value.pct_change()
     ).fillna(0)
 
-    # For the graphs/results, normalize each period to 1
     train_portfolio["market_cumulative"] = (
         train_market_value /
         train_market_value.iloc[0]
