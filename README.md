@@ -15,28 +15,38 @@ Throughout this project we extracted data from a number of assets using a train/
 Some important figures generated throughout the project:
 
 Week 6: Avg Sharpe Decay per Asset
+
 ![alt text](outputs/figures/w6_avgsharpedecay.png)
 
 Week 6: Avg Train Sharpe vs Avg Test Sharpe per Strategy
+
 ![alt text](outputs/figures/w6_sharpe_per_strategy.png) 
 
 Week 7: ML Feature Set Avg Metrics
+
 ![alt text](outputs/figures/w7_ml_feature_metrics.png)
 
 Week 8: Beta vs Avg Test Sharpe
+
 ![alt text](outputs/figures/w8_beta_sharpe.png)
 
 Week 9: Cross-Sectional Analysis
+
 ![alt text](outputs/figures/w9_crosssectionalanalysis1.png)
 
 Week 10: Correlation Matrix
+
 ![alt text](outputs/figures/w10_correlationheatmap.png)
 
 ## Repository Structure
 The folder 'notebooks' contains all Jupyter Notebooks where I experiment with the code, data, strategies, etc.
+
 The folder 'notes' contains Markdown documents starting at week 3 for weekly documentation of results.
+
 The folder 'figures' contains CSV files recording experiment outputs and other important tabular data and another folder 'figures' containing some of the most meaningful figures generated each week.
+
 The folder 'reports' contains the final report of the project, condensing findings and conclusions.
+
 The folder 'src' contains all of the functions created throughout the project.
 
 ## Future Work
